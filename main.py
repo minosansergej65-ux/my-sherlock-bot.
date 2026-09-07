@@ -1,14 +1,4 @@
-import telebot
-import requests
-from g4f.client import Client
-
-# Ваш токен от Telegram-бота apteka
-TELEGRAM_TOKEN = '8836578040:AAGYmbBxH2Ohp16v2FYL-U7hm-p0Zx6h3lE'
-
-bot = telebot.TeleBot(TELEGRAM_TOKEN)
-
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
+message):
     welcome_text = (
         "🤖 Привет! Я твой продвинутый ИИ-бот.\n\n"
         "💬 **Общение:** Просто напиши мне любой вопрос, и я отвечу.\n"

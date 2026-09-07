@@ -1,4 +1,14 @@
-message):
+import telebot
+import requests
+import g4f
+
+# Ваш токен от Telegram-бота apteka
+TELEGRAM_TOKEN = '8836578040:AAGYmbBxH2Ohp16v2FYL-U7hm-p0Zx6h3lE'
+
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
+
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
     welcome_text = (
         "🤖 Привет! Я твой продвинутый ИИ-бот.\n\n"
         "💬 **Общение:** Просто напиши мне любой вопрос, и я отвечу.\n"
@@ -10,7 +20,6 @@ message):
 # КОМАНДА ДЛЯ ГЕНЕРАЦИИ КАРТИНКИ
 @bot.message_handler(commands=['img'])
 def handle_image_generation(message):
-    # Забираем всё, что написано после команды /img
     prompt = message.text.replace('/img', '').strip()
     
     if not prompt:
@@ -21,13 +30,8 @@ def handle_image_generation(message):
     bot.send_chat_action(message.chat.id, 'upload_photo')
     
     try:
-        # Используем бесплатный быстрый генератор картинок Pollinations AI
         image_url = f"https://pollinations.ai{requests.utils.quote(prompt)}?width=1024&height=1024&seed=42&nofeed=true"
-        
-        # Скачиваем сгенерированную картинку
         img_data = requests.get(image_url).content
-        
-        # Отправляем фото пользователю в Telegram
         bot.send_photo(message.chat.id, img_data, caption=f"✨ Готово по запросу: {prompt}")
         
     except Exception as e:
@@ -40,12 +44,12 @@ def handle_ai_chat(message):
     bot.send_chat_action(message.chat.id, 'typing')
     
     try:
-        client = Client()
-        response = client.chat.completions.create(
+        response = g4f.ChatCompletion.create(
+            provider=g4f.Provider.Blackbox,
             model="gpt-4o",
             messages=[{"role": "user", "content": user_text}],
         )
-        ai_response = response.choices.message.content
+        ai_response = response if response else "Извините, не удалось получить осмысленный ответ."
         bot.reply_to(message, ai_response)
         
     except Exception as e:

@@ -1,8 +1,8 @@
 import telebot
 import subprocess
 
-# Ваш токен от бота apteka успешно добавлен
-TOKEN = '8836578040:AAHja8dDj2vLw3BzlnCzXByVlvr6HFv_neI'
+# Новый токен успешно добавлен, привязка к PuzzleBot сброшена!
+TOKEN = '8836578040:AAGYmbBxH2Ohp16v2FYL-U7hm-p0Zx6h3lE'
 
 bot = telebot.TeleBot(TOKEN)
 

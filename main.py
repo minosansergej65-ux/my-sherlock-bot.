@@ -1,47 +1,66 @@
 import telebot
-import subprocess
+import requests
+from g4f.client import Client
 
-# Новый токен успешно добавлен, привязка к PuzzleBot сброшена!
-TOKEN = '8836578040:AAGYmbBxH2Ohp16v2FYL-U7hm-p0Zx6h3lE'
+# Ваш токен от Telegram-бота apteka
+TELEGRAM_TOKEN = '8836578040:AAGYmbBxH2Ohp16v2FYL-U7hm-p0Zx6h3lE'
 
-bot = telebot.TeleBot(TOKEN)
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    bot.reply_to(message, "Привет! Отправь мне никнейм, и я найду его профили в соцсетях через Sherlock.")
+    welcome_text = (
+        "🤖 Привет! Я твой продвинутый ИИ-бот.\n\n"
+        "💬 **Общение:** Просто напиши мне любой вопрос, и я отвечу.\n"
+        "🎨 **Картинки:** Напиши `/img` и описание на английском или русском "
+        "(например: `/img котик в шляпе`), чтобы я сгенерировал изображение!"
+    )
+    bot.reply_to(message, welcome_text, parse_mode="Markdown")
 
-@bot.message_handler(func=lambda message: True)
-def search_username(message):
-    username = message.text.strip()
+# КОМАНДА ДЛЯ ГЕНЕРАЦИИ КАРТИНКИ
+@bot.message_handler(commands=['img'])
+def handle_image_generation(message):
+    # Забираем всё, что написано после команды /img
+    prompt = message.text.replace('/img', '').strip()
     
-    if " " in username:
-        bot.reply_to(message, "Пожалуйста, введите один никнейм без пробелов.")
+    if not prompt:
+        bot.reply_to(message, "❌ Пожалуйста, напишите описание картинки после команды. Пример: `/img красивый пейзаж`")
         return
-
-    bot.reply_to(message, f"Ищу профили для: {username}...\nПоиск в облаке занимает около 1 минуты.")
+        
+    bot.reply_to(message, f"🎨 Рисую по вашему запросу: *\"{prompt}\"*...\nЭто займет около 10-20 секунд.", parse_mode="Markdown")
+    bot.send_chat_action(message.chat.id, 'upload_photo')
     
     try:
-        # Запуск Sherlock в облачной системе Linux
-        result = subprocess.run(
-            ["sherlock", username, "--timeout", "5"], 
-            capture_output=True, 
-            text=True,
-            errors='ignore'
-        )
+        # Используем бесплатный быстрый генератор картинок Pollinations AI
+        image_url = f"https://pollinations.ai{requests.utils.quote(prompt)}?width=1024&height=1024&seed=42&nofeed=true"
         
-        lines = result.stdout.split('\n')
-        found_links = [line for line in lines if "http" in line]
+        # Скачиваем сгенерированную картинку
+        img_data = requests.get(image_url).content
         
-        if found_links:
-            response = "Вот что удалось найти:\n\n" + "\n".join(found_links)
-        else:
-            response = "Профилей с таким именем не найдено."
-            
+        # Отправляем фото пользователю в Telegram
+        bot.send_photo(message.chat.id, img_data, caption=f"✨ Готово по запросу: {prompt}")
+        
     except Exception as e:
-        response = f"Ошибка поиска: {e}"
+        bot.reply_to(message, f"❌ Не удалось сгенерировать картинку. Ошибка: {e}")
+
+# ОБЫЧНЫЙ ТЕКСТОВЫЙ ЧАТ С ИИ
+@bot.message_handler(func=lambda message: True)
+def handle_ai_chat(message):
+    user_text = message.text.strip()
+    bot.send_chat_action(message.chat.id, 'typing')
+    
+    try:
+        client = Client()
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": user_text}],
+        )
+        ai_response = response.choices.message.content
+        bot.reply_to(message, ai_response)
         
-    bot.send_message(message.chat.id, response)
+    except Exception as e:
+        bot.reply_to(message, f"Извините, сервер ИИ сейчас перегружен. Попробуйте еще раз. Ошибка: {e}")
 
 if __name__ == '__main__':
-    print("Бот запущен на сервере!")
+    print("ИИ-Бот с генерацией картинок успешно запущен!")
     bot.infinity_polling()

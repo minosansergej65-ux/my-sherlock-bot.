@@ -1,5 +1,6 @@
 import telebot
 import requests
+import urllib.parse
 import g4f
 
 # Ваш токен от Telegram-бота apteka
@@ -30,7 +31,10 @@ def handle_image_generation(message):
     bot.send_chat_action(message.chat.id, 'upload_photo')
     
     try:
-        image_url = f"https://pollinations.ai{requests.utils.quote(prompt)}?width=1024&height=1024&seed=42&nofeed=true"
+        # Безопасное кодирование русского текста для URL ссылки
+        encoded_prompt = urllib.parse.quote(prompt)
+        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&seed=42&nofeed=true"
+        
         img_data = requests.get(image_url).content
         bot.send_photo(message.chat.id, img_data, caption=f"✨ Готово по запросу: {prompt}")
         
@@ -58,4 +62,4 @@ def handle_ai_chat(message):
 
 if __name__ == '__main__':
     print("ИИ-Бот с генерацией картинок успешно запущен!")
-    bot.infinity_polling() 
+    bot.infinity_polling()

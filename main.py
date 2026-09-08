@@ -57,4 +57,3 @@ def handle_ai_chat(message):
 
 if __name__ == '__main__':
     print("ИИ-Бот с генерацией картинок успешно запущен!")
-    bot.infinity_polling()

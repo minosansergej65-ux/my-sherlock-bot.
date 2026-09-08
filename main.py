@@ -44,11 +44,12 @@ def handle_ai_chat(message):
     bot.send_chat_action(message.chat.id, 'typing')
     
     try:
+        # Используем автоматический подбор рабочих провайдеров, не требующих авторизации и браузера
         response = g4f.ChatCompletion.create(
-            provider=g4f.Provider.Blackbox,
-            model="gpt-4o",
+            model=g4f.models.default,
             messages=[{"role": "user", "content": user_text}],
         )
+        
         ai_response = response if response else "Извините, не удалось получить осмысленный ответ."
         bot.reply_to(message, ai_response)
         
@@ -57,3 +58,4 @@ def handle_ai_chat(message):
 
 if __name__ == '__main__':
     print("ИИ-Бот с генерацией картинок успешно запущен!")
+    bot.infinity_polling() 

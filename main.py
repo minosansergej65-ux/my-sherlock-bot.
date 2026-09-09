@@ -10,8 +10,8 @@ BOT_USERNAME = bot.get_me().username
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     welcome_text = (
-        "🤖 Привет! Я твой новый, стабильный ИИ-бот.\n\n"
-        "💬 **Общение:** Пиши мне любые вопросы, и я отвечу.\n"
+        "🤖 Привет! Я твой новый, полностью стабильный ИИ-бот.\n\n"
+        "💬 **Общение:** Пиши мне любые вопросы, я отвечу без ограничений.\n"
         "🎨 **Картинки:** Напиши `/img` и описание, чтобы я нарисовал изображение!"
     )
     bot.reply_to(message, welcome_text, parse_mode="Markdown")
@@ -39,7 +39,7 @@ def handle_image_generation(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Не удалось сгенерировать картинку. Ошибка: {e}")
 
-# ОБЩЕНИЕ С ИИ ЧЕРЕЗ ЧИСТЫЙ ЗАПРОС К GPT-4O-MINI
+# ОБЩЕНИЕ ЧЕРЕЗ СТАБИЛЬНЫЙ НЕЗАВИСИМЫЙ ИИ-СЕРВЕР ЧАТА
 @bot.message_handler(func=lambda message: True)
 def handle_ai_chat(message):
     user_text = message.text.strip()
@@ -59,35 +59,22 @@ def handle_ai_chat(message):
     bot.send_chat_action(message.chat.id, 'typing')
     
     try:
-        # 1. Получаем технический токен от DuckDuckGo
-        headers = {"x-client-variant": "chat"}
-        res = requests.get("https://duckduckgo.com", headers=headers)
-        v_token = res.headers.get("x-vqd-accept")
-
-        # 2. Отправляем чистый запрос пользователя без блокирующих инструкций
+        # Используем альтернативный свободный API без ограничений
+        url = "https://aryahcr.cc"
+        headers = {"Content-Type": "application/json"}
         payload = {
-            "model": "gpt-4o-mini",
-            "messages": [{"role": "user", "content": clean_text}]
+            "messages": [{"role": "user", "content": clean_text}],
+            "stream": False
         }
-        headers["x-vqd-4"] = v_token
         
-        response = requests.post("https://duckduckgo.com", headers=headers, json=payload)
+        response = requests.post(url, headers=headers, json=payload)
         
-        # Декодируем потоковый ответ сервера
-        lines = response.text.split("\n")
-        ai_response = ""
-        for line in lines:
-            if line.startswith("data:"):
-                import json
-                try:
-                    data_json = json.loads(line[5:])
-                    if "message" in data_json:
-                        ai_response += data_json["message"]
-                except:
-                    pass
-        
-        if not ai_response:
-            ai_response = "Извините, не удалось получить ответ. Попробуйте перефразировать вопрос."
+        if response.status_code == 200:
+            result = response.json()
+            # Достаем чистый текст ответа из структуры ответа сервера
+            ai_response = result.get('gpt', 'Извините, сервер временно пуст.')
+        else:
+            ai_response = "Извините, не удалось получить ответ от ИИ. Попробуйте еще раз чуть позже."
             
         bot.reply_to(message, ai_response)
         
@@ -95,5 +82,5 @@ def handle_ai_chat(message):
         bot.reply_to(message, f"❌ Ошибка соединения с ИИ. Детали: {e}")
 
 if __name__ == '__main__':
-    print("Стабильная версия бота успешно запущена!")
+    print("Неубиваемая альтернативная версия бота запущена!")
     bot.infinity_polling()

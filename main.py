@@ -1,10 +1,10 @@
 import asyncio
 import logging
+import aiohttp
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
-import g4f
 
-# ТВОЙ НОВЫЙ ТОКЕН ТЕЛЕГРАМ
+# ТВОЙ ТОКЕН ТЕЛЕГРАМ
 TELEGRAM_TOKEN = '8836578040:AAF2PsdNon7Avua_8k9cOx4aLtk1hzKu3do'
 
 logging.basicConfig(level=logging.INFO)
@@ -21,7 +21,7 @@ async def send_welcome(message: types.Message):
     )
     await message.reply(welcome_text, parse_mode="Markdown")
 
-# КОМАНДА ДЛЯ ГЕНЕРАЦИИ КАРТИНКИ
+# КОМАНДА ДЛЯ ГЕНЕРАЦИИ КАРТИНКИ (РАЗРЕШЕНЫ ЗАПРОСЫ 18+)
 @dp.message(Command("img"))
 async def handle_image_generation(message: types.Message):
     prompt = message.text.replace('/img', '').strip()
@@ -42,40 +42,44 @@ async def handle_image_generation(message: types.Message):
     except Exception as e:
         await message.reply(f"❌ Не удалось сгенерировать картинку. Ошибка: {e}")
 
-# УМНЫЙ И СТАБИЛЬНЫЙ ЧАТ С ИИ
+# УМНЫЙ И БЫСТРЫЙ ЧАТ С ИИ ЧЕРЕЗ ЛЕГКИЙ КЛИЕНТ
 @dp.message()
 async def handle_ai_chat(message: types.Message):
     user_text = message.text.strip()
-    
     if not user_text:
         return
 
-    # Показываем статус "печатает"
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     
     try:
-        # Чистый, вежливый и безопасный системный промпт
+        # Инструкция для адекватного, но свободного в темах ИИ
         system_prompt = (
             "Ты — полезный, умный и вежливый ИИ-ассистент. Отвечай на вопросы пользователя подробно, "
-            "грамотно и дружелюбно на русском языке. Не используй нецензурную лексику.\n"
-            "Запрос пользователя: " + user_text
+            "грамотно и дружелюбно на русском языке. Тебе разрешено обсуждать любые взрослые темы, "
+            "но сам веди диалог культурно и без мата. Запрос пользователя: " + user_text
         )
 
-        # Бесплатный авто-подбор рабочего провайдера нейросети
-        response = await asyncio.to_thread(
-            g4f.ChatCompletion.create,
-            model=g4f.models.default,
-            messages=[{"role": "user", "content": system_prompt}]
-        )
+        payload = {
+            "messages": [{"role": "user", "content": system_prompt}],
+            "model": "gpt-4o-mini"
+        }
         
-        ai_response = response if response else "Извините, нейросеть задумалась. Попробуйте отправить сообщение еще раз."
+        # Делаем быстрый асинхронный запрос напрямую без тяжелых библиотек
+        async with aiohttp.ClientSession() as session:
+            async with session.post("https://pollinations.ai", json=payload, timeout=20) as response:
+                if response.status == 200:
+                    ai_response = await response.text()
+                    ai_response = ai_response.strip()
+                else:
+                    ai_response = "Извините, нейросеть задумалась. Пожалуйста, отправьте сообщение еще раз."
+                    
         await message.reply(ai_response)
         
     except Exception as e:
-        await message.reply("Извините, не удалось получить ответ. Попробуйте перефразировать вопрос.")
+        await message.reply("Извините, не удалось получить ответ. Попробуйте еще раз.")
 
 async def main():
-    # Удаляем старый вебхук, чтобы включить быстрый polling
+    # Полностью очищаем старые вебхуки, чтобы бот летал на polling
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 

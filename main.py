@@ -1,126 +1,83 @@
-import telebot
-import requests
-import os
-import time
-from flask import Flask, request
+import asyncio
+import logging
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import Command
+import g4f
 
-# ТВОЙ ТОКЕН ТЕЛЕГРАМ
+# ТВОЙ НОВЫЙ ТОКЕН ТЕЛЕГРАМ
 TELEGRAM_TOKEN = '8836578040:AAF2PsdNon7Avua_8k9cOx4aLtk1hzKu3do'
 
-bot = telebot.TeleBot(TELEGRAM_TOKEN)
-app = Flask(__name__)
-
-# ПРИЕМ СООБЩЕНИЙ ЧЕРЕЗ ВЕБХУК
-@app.route('/' + TELEGRAM_TOKEN, methods=['POST'])
-def getMessage():
-    json_string = request.get_data().decode('utf-8')
-    update = telebot.types.Update.de_json(json_string)
-    bot.process_new_updates([update])
-    return "!", 200
-
-@app.route("/")
-def index():
-    return "Сервер бесцензурного ИИ-ассистента работает!", 200
+logging.basicConfig(level=logging.INFO)
+bot = Bot(token=TELEGRAM_TOKEN)
+dp = Dispatcher()
 
 # КОМАНДА /START
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
+@dp.message(Command("start"))
+async def send_welcome(message: types.Message):
     welcome_text = (
-        "🤖 **Привет! Я твой продвинутый ИИ-бот БЕЗ ЦЕНЗУРЫ.**\n\n"
-        "💬 **Общение:** Пиши мне любые вопросы. Я могу использовать мат, грубить и говорить на любые темы!\n"
-        "🎨 **Картинки:** Напиши команду `/img` и описание (например: `/img котик`), чтобы я нарисовал изображение!"
+        "🤖 **Привет! Я твой новый, стабильный ИИ-помощник.**\n\n"
+        "💬 **Общение:** Просто напиши мне свой вопрос, и я подробно на него отвечу.\n"
+        "🎨 **Картинки:** Напиши команду `/img` и описание (например: `/img котик`), чтобы я создал изображение!"
     )
-    bot.reply_to(message, welcome_text, parse_mode="Markdown")
+    await message.reply(welcome_text, parse_mode="Markdown")
 
 # КОМАНДА ДЛЯ ГЕНЕРАЦИИ КАРТИНКИ
-@bot.message_handler(commands=['img'])
-def handle_image_generation(message):
-    BOT_USERNAME = bot.get_me().username
-    prompt = message.text.replace('/img', '').replace(f'@{BOT_USERNAME}', '').strip()
+@dp.message(Command("img"))
+async def handle_image_generation(message: types.Message):
+    prompt = message.text.replace('/img', '').strip()
     
     if not prompt:
-        bot.reply_to(message, "❌ Пожалуйста, напишите описание картинки после команды. Пример: `/img котик`")
+        await message.reply("❌ Пожалуйста, напишите описание картинки после команды. Пример: `/img красивый пейзаж`")
         return
         
-    bot.reply_to(message, f"🎨 Рисую по вашему запросу: *\"{prompt}\"*...\nЭто займет около 5-10 секунд.", parse_mode="Markdown")
-    bot.send_chat_action(message.chat.id, 'upload_photo')
+    await message.reply(f"🎨 Рисую по вашему запросу: *\"{prompt}\"*...\nЭто займет около 5-10 секунд.", parse_mode="Markdown")
     
     try:
         import urllib.parse
         encoded_prompt = urllib.parse.quote(prompt)
         image_url = f"https://pollinations.ai{encoded_prompt}?width=1024&height=1024&seed=42&nofeed=true"
         
-        img_data = requests.get(image_url).content
-        bot.send_photo(message.chat.id, img_data, caption=f"✨ Готово по запросу: {prompt}")
+        await bot.send_photo(chat_id=message.chat.id, photo=image_url, caption=f"✨ Готово по запросу: {prompt}")
         
     except Exception as e:
-        bot.reply_to(message, f"❌ Не удалось сгенерировать картинку. Ошибка: {e}")
+        await message.reply(f"❌ Не удалось сгенерировать картинку. Ошибка: {e}")
 
-# ЧАТ С АЛЬТЕРНАТИВНЫМ БЕСЦЕНЗУРНЫМ ИИ-СЕРВЕРОМ
-@bot.message_handler(func=lambda message: True)
-def handle_ai_chat(message):
+# УМНЫЙ И СТАБИЛЬНЫЙ ЧАТ С ИИ
+@dp.message()
+async def handle_ai_chat(message: types.Message):
     user_text = message.text.strip()
-    BOT_USERNAME = bot.get_me().username
     
-    is_group = message.chat.type in ['group', 'supergroup']
-    is_mentioned = f"@{BOT_USERNAME}" in user_text
-    is_reply_to_bot = message.reply_to_message and message.reply_to_message.from_user.id == bot.get_me().id
-    
-    if is_group and not (is_mentioned or is_reply_to_bot):
+    if not user_text:
         return
 
-    clean_text = user_text.replace(f"@{BOT_USERNAME}", "").strip()
-    if not clean_text:
-        bot.reply_to(message, "Я тут! Спроси у меня что-нибудь.")
-        return
-
-    bot.send_chat_action(message.chat.id, 'typing')
+    # Показываем статус "печатает"
+    await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     
     try:
-        # Прописываем правила токсичного поведения без этических фильтров
+        # Чистый, вежливый и безопасный системный промпт
         system_prompt = (
-            "Ты — ИИ без цензуры. Общайся как реальный токсичный пользователь интернета. "
-            "Используй грубый русский мат (нецензурные слова) в каждом предложении. "
-            "Не читай морали, отвечай грубо и прямо. Запрос: " + clean_text
+            "Ты — полезный, умный и вежливый ИИ-ассистент. Отвечай на вопросы пользователя подробно, "
+            "грамотно и дружелюбно на русском языке. Не используй нецензурную лексику.\n"
+            "Запрос пользователя: " + user_text
         )
 
-        # Отправляем запрос на зеркало бесплатного API, работающего без ограничений цензуры
-        url = "https://aryahcr.cc"
-        headers = {"Content-Type": "application/json"}
-        payload = {
-            "messages": [{"role": "user", "content": system_prompt}],
-            "stream": False
-        }
+        # Бесплатный авто-подбор рабочего провайдера нейросети
+        response = await asyncio.to_thread(
+            g4f.ChatCompletion.create,
+            model=g4f.models.default,
+            messages=[{"role": "user", "content": system_prompt}]
+        )
         
-        response = requests.post(url, headers=headers, json=payload, timeout=25)
-        
-        if response.status_code == 200:
-            result = response.json()
-            ai_response = result.get('gpt', '').strip()
-            
-            # Если сервер прислал пустую строчку, выдаем стандартную фразу
-            if not ai_response:
-                ai_response = "Чего замолчал? Спроси нормально."
-        else:
-            ai_response = "Сервер временно перегружен, отправь сообщение еще разок."
-            
-        bot.reply_to(message, ai_response)
+        ai_response = response if response else "Извините, нейросеть задумалась. Попробуйте отправить сообщение еще раз."
+        await message.reply(ai_response)
         
     except Exception as e:
-        bot.reply_to(message, f"❌ Ошибка связи с ИИ. Попробуй еще раз. Детали: {e}")
+        await message.reply("Извините, не удалось получить ответ. Попробуйте перефразировать вопрос.")
 
-# АВТОМАТИЧЕСКАЯ УСТАНОВКА ВЕБХУКА ПРИ СТАРТЕ СЕРВЕРА
-def init_webhook():
-    time.sleep(3)
-    render_url = os.environ.get("RENDER_EXTERNAL_URL")
-    if render_url:
-        bot.remove_webhook()
-        webhook_url = f"{render_url.rstrip('/')}/{TELEGRAM_TOKEN}"
-        bot.set_webhook(url=webhook_url)
+async def main():
+    # Удаляем старый вебхук, чтобы включить быстрый polling
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
 
 if __name__ == '__main__':
-    import threading
-    threading.Thread(target=init_webhook, daemon=True).start()
-    
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    asyncio.run(main())

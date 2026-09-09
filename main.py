@@ -4,7 +4,7 @@ import urllib.parse
 
 # ТВОЙ ТОКЕН ТЕЛЕГРАМ
 TELEGRAM_TOKEN = '8836578040:AAGYmbBxH2Ohp16v2FYL-U7hm-p0Zx6h3lE'
-# ТВОЙ БЕСПЛАТНЫЙ КЛЮЧ ИЗ OPENROUTER
+# ТВОЙ РАБОЧИЙ КЛЮЧ ИЗ OPENROUTER
 OPENROUTER_API_KEY = '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'
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
@@ -41,7 +41,7 @@ def handle_image_generation(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Не удалось сгенерировать картинку. Ошибка: {e}")
 
-# БЕСПЛАТНОЕ ОБЩЕНИЕ БЕЗ ЦЕНЗУРЫ
+# БЕСПЛАТНОЕ ОБЩЕНИЕ БЕЗ ЦЕНЗУРЫ НА СТАБИЛЬНОЙ МОДЕЛИ MISTRAL
 @bot.message_handler(func=lambda message: True)
 def handle_ai_chat(message):
     user_text = message.text.strip()
@@ -74,8 +74,8 @@ def handle_ai_chat(message):
         }
         
         data = {
-            # Указываем абсолютно бесплатную модель из каталога OpenRouter
-            "model": "meta-llama/llama-3-8b-instruct:free", 
+            # Указываем сверхстабильную бесплатную модель Mistral 7B
+            "model": "mistralai/mistral-7b-instruct:free", 
             "messages": [{"role": "user", "content": jailbreak_text}]
         }
         
@@ -89,5 +89,5 @@ def handle_ai_chat(message):
         bot.reply_to(message, f"❌ Ошибка сервера ИИ. Попробуйте позже. Детали: {e}")
 
 if __name__ == '__main__':
-    print("Бесплатный бесцензурный бот запущен!")
+    print("Бесплатный бесцензурный бот на Mistral запущен!")
     bot.infinity_polling()

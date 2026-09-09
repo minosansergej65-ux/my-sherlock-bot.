@@ -1,8 +1,8 @@
 import telebot
 import requests
 
-# ТВОЙ ТОКЕН ТЕЛЕГРАМ
-TELEGRAM_TOKEN = '8836578040:AAGYmbBxH2Ohp16v2FYL-U7hm-p0Zx6h3lE'
+# ТВОЙ НОВЫЙ ТОКЕН ТЕЛЕГРАМ
+TELEGRAM_TOKEN = '8836578040:AAF2PsdNon7Avua_8k9cOx4aLtk1hzKu3do'
 # ТВОЙ ОФИЦИАЛЬНЫЙ КЛЮЧ DEEPSEEK
 DEEPSEEK_API_KEY = 'sk-cb135353c7be4dc7bacf37e702278dc0'
 
@@ -80,7 +80,6 @@ def handle_ai_chat(message):
             result = response.json()
             ai_response = result['choices']['message']['content']
         else:
-            # Если DeepSeek требует пополнения баланса, бот сразу вежливо сообщит код ошибки
             ai_response = f"❌ Сервер DeepSeek вернул статус {response.status_code}. Возможно, для нового ключа требуется минимальное пополнение баланса ($1-2) на их сайте."
             
         bot.reply_to(message, ai_response)

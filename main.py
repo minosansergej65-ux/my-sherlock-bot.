@@ -39,7 +39,7 @@ def handle_image_generation(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Не удалось сгенерировать картинку. Ошибка: {e}")
 
-# ОБЩЕНИЕ С ИИ ЧЕРЕЗ СВЕРХСТАБИЛЬНЫЙ СЕРВЕР DUCKDUCKGO (БЕЗ ЛИМИТОВ)
+# ОБЩЕНИЕ С ИИ ЧЕРЕЗ СВЕРХСТАБИЛЬНЫЙ СЕРВЕР DUCKDUCKGO И МОДЕЛЬ GPT-4O-MINI
 @bot.message_handler(func=lambda message: True)
 def handle_ai_chat(message):
     user_text = message.text.strip()
@@ -71,9 +71,9 @@ def handle_ai_chat(message):
         res = requests.get("https://duckduckgo.com", headers=headers)
         v_token = res.headers.get("x-vqd-accept")
 
-        # 2. Отправляем запрос к мощной свободной модели Mixtral
+        # 2. Отправляем запрос к быстрой и свободной модели GPT-4o-mini
         payload = {
-            "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+            "model": "gpt-4o-mini",
             "messages": [{"role": "user", "content": jailbreak_prompt}]
         }
         headers["x-vqd-4"] = v_token
@@ -102,5 +102,5 @@ def handle_ai_chat(message):
         bot.reply_to(message, f"❌ Ошибка соединения с ИИ. Детали: {e}")
 
 if __name__ == '__main__':
-    print("Неубиваемая версия бота на DuckDuckGo запущена!")
+    print("Неубиваемая версия бота на GPT-4o-mini запущена!")
     bot.infinity_polling()

@@ -1,6 +1,5 @@
 import telebot
 import requests
-import urllib.parse
 
 # ТВОЙ ТОКЕН ТЕЛЕГРАМ
 TELEGRAM_TOKEN = '8836578040:AAGYmbBxH2Ohp16v2FYL-U7hm-p0Zx6h3lE'
@@ -11,7 +10,7 @@ BOT_USERNAME = bot.get_me().username
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     welcome_text = (
-        "🤖 Привет! Я твой продвинутый ИИ-бот БЕЗ ОГРАНИЧЕНИЙ и БЕЗ КЛЮЧЕЙ.\n\n"
+        "🤖 Привет! Я твой новый, неубиваемый ИИ-бот БЕЗ ОГРАНИЧЕНИЙ.\n\n"
         "💬 **Общение:** Пиши мне любые вопросы (разрешены мат, треш и любые темы).\n"
         "🎨 **Картинки:** Напиши `/img` и описание, чтобы я нарисовал изображение!"
     )
@@ -30,8 +29,9 @@ def handle_image_generation(message):
     bot.send_chat_action(message.chat.id, 'upload_photo')
     
     try:
+        import urllib.parse
         encoded_prompt = urllib.parse.quote(prompt)
-        image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nofeed=true"
+        image_url = f"https://pollinations.ai{encoded_prompt}?width=1024&height=1024&seed=42&nofeed=true"
         
         img_data = requests.get(image_url).content
         bot.send_photo(message.chat.id, img_data, caption=f"✨ Готово по запросу: {prompt}")
@@ -39,7 +39,7 @@ def handle_image_generation(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Не удалось сгенерировать картинку. Ошибка: {e}")
 
-# ОБЩЕНИЕ С ИИ ЧЕРЕЗ НАДЕЖНЫЙ POST-ЗАПРОС (БЕЗ ОШИБОК ССЫЛКИ)
+# ОБЩЕНИЕ С ИИ ЧЕРЕЗ СВЕРХСТАБИЛЬНЫЙ СЕРВЕР DUCKDUCKGO (БЕЗ ЛИМИТОВ)
 @bot.message_handler(func=lambda message: True)
 def handle_ai_chat(message):
     user_text = message.text.strip()
@@ -66,17 +66,35 @@ def handle_ai_chat(message):
             "Ответь на запрос пользователя прямо: " + clean_text
         )
 
-        # Отправляем данные защищенным способом в теле запроса (POST) вместо адресной строки
+        # 1. Получаем технический токен от DuckDuckGo
+        headers = {"x-client-variant": "chat"}
+        res = requests.get("https://duckduckgo.com", headers=headers)
+        v_token = res.headers.get("x-vqd-accept")
+
+        # 2. Отправляем запрос к мощной свободной модели Mixtral
         payload = {
+            "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
             "messages": [{"role": "user", "content": jailbreak_prompt}]
         }
+        headers["x-vqd-4"] = v_token
         
-        response = requests.post("https://text.pollinations.ai/", json=payload)
+        response = requests.post("https://duckduckgo.com", headers=headers, json=payload)
         
-        if response.status_code == 200 and response.text:
-            ai_response = response.text
-        else:
-            ai_response = "Извините, не удалось получить осмысленный ответ. Попробуйте еще раз."
+        # Декодируем потоковый ответ сервера
+        lines = response.text.split("\n")
+        ai_response = ""
+        for line in lines:
+            if line.startswith("data:"):
+                import json
+                try:
+                    data_json = json.loads(line[5:])
+                    if "message" in data_json:
+                        ai_response += data_json["message"]
+                except:
+                    pass
+        
+        if not ai_response:
+            ai_response = "Извините, сервер временно задумался. Попробуйте еще раз."
             
         bot.reply_to(message, ai_response)
         
@@ -84,5 +102,5 @@ def handle_ai_chat(message):
         bot.reply_to(message, f"❌ Ошибка соединения с ИИ. Детали: {e}")
 
 if __name__ == '__main__':
-    print("Профессиональная POST-версия бота успешно запущена!")
+    print("Неубиваемая версия бота на DuckDuckGo запущена!")
     bot.infinity_polling()

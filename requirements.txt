@@ -1,3 +1,2 @@
-pyTelegramBotAPI
-g4f[all]
-requests
+aiogram==3.13.1
+g4f>=0.3.3.0

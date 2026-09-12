@@ -57,7 +57,7 @@ def handle_image_generation(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Не удалось сгенерировать картинку. Попробуйте изменить запрос.")
 
-# ЧАТ С ОФИЦИАЛЬНЫМ CHATGPT (ИСПРАВЛЕННЫЙ ПАРСИНГ ОТВЕТА)
+# ЧАТ С ОФИЦИАЛЬНЫМ CHATGPT (ПОЛНОСТЬЮ ЧИСТЫЙ ЗАПРОС)
 @bot.message_handler(func=lambda message: True)
 def handle_ai_chat(message):
     user_text = message.text.strip()
@@ -83,6 +83,7 @@ def handle_ai_chat(message):
     bot.send_chat_action(message.chat.id, 'typing')
     
     try:
+        # Прямой и точный адрес единого шлюза ProxyAPI
         url = "https://proxyapi.ru"
             
         headers = {
@@ -90,6 +91,7 @@ def handle_ai_chat(message):
             "Authorization": f"Bearer {API_KEY}"
         }
         
+        # Кристально чистое название модели без лишних префиксов каталогов
         payload = {
             "model": "gpt-4o-mini",
             "messages": [
@@ -103,10 +105,10 @@ def handle_ai_chat(message):
         
         if response.status_code == 200:
             result = response.json()
-            # ПРАВИЛЬНЫЙ ИСПРАВЛЕННЫЙ СПУСК К ТЕКСТУ ОТВЕТА
+            # Корректно забираем текст из JSON-ответа
             ai_response = result['choices'][0]['message']['content'].strip()
         else:
-            ai_response = f"❌ Ошибка ProxyAPI (Код {response.status_code}). Пожалуйста, проверьте баланс на сайте proxyapi.ru."
+            ai_response = f"❌ Ошибка шлюза ИИ (Код {response.status_code}). Пожалуйста, проверьте баланс на сайте proxyapi.ru."
             
         bot.reply_to(message, ai_response)
         

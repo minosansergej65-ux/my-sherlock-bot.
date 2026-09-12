@@ -6,6 +6,8 @@ from flask import Flask, request
 
 # ТВОЙ ТОКЕН ТЕЛЕГРАМ
 TELEGRAM_TOKEN = '8836578040:AAF2PsdNon7Avua_8k9cOx4aLtk1hzKu3do'
+# НАДЕЖНЫЙ БЕСПЛАТНЫЙ КЛЮЧ ДЛЯ СТАБИЛЬНОГО ЧАТА
+HF_API_KEY = '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'
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 app = Flask(__name__)
@@ -30,7 +32,7 @@ def send_welcome(message):
     )
     bot.reply_to(message, welcome_text, parse_mode="Markdown")
 
-# КОМАНДА ДЛЯ ГЕНЕРАЦИИ КАРТИНКИ ЧЕРЕЗ БЕЗОПАСНЫЙ POST
+# КОМАНДА ДЛЯ ГЕНЕРАЦИИ КАРТИНКИ
 @bot.message_handler(commands=['img'])
 def handle_image_generation(message):
     BOT_USERNAME = bot.get_me().username
@@ -44,31 +46,15 @@ def handle_image_generation(message):
     bot.send_chat_action(message.chat.id, 'upload_photo')
     
     try:
-        # Отправляем данные защищенным способом в теле запроса (POST) вместо адресной строки
-        payload = {
-            "prompt": prompt,
-            "width": 1024,
-            "height": 1024,
-            "model": "flux",
-            "n": 1
-        }
-        response = requests.post("https://pollinations.ai", json={"messages": [{"role": "user", "content": f"Сгенерируй картинку: {prompt}"}], "model": "image"}, timeout=20)
-        
-        # Если POST-метод вернул прямую ссылку
-        if response.status_code == 200 and "http" in response.text:
-            image_url = response.text.strip()
-            img_data = requests.get(image_url).content
-            bot.send_photo(message.chat.id, img_data, caption=f"✨ Готово по запросу: {prompt}")
-        else:
-            # Запасной легкий вариант без кодирования
-            image_url = f"https://pollinations.ai{prompt}&nofeed=true"
-            img_data = requests.get(image_url).content
-            bot.send_photo(message.chat.id, img_data, caption=f"✨ Готово по запросу: {prompt}")
-        
+        import urllib.parse
+        encoded_prompt = urllib.parse.quote(prompt)
+        image_url = f"https://pollinations.ai{encoded_prompt}&nofeed=true"
+        img_data = requests.get(image_url).content
+        bot.send_photo(message.chat.id, img_data, caption=f"✨ Готово по запросу: {prompt}")
     except Exception as e:
-        bot.reply_to(message, f"❌ Не удалось сгенерировать картинку. Попробуйте на английском или измените запрос.")
+        bot.reply_to(message, f"❌ Не удалось сгенерировать картинку. Попробуйте изменить запрос.")
 
-# ОБЩЕНИЕ ЧЕРЕЗ СВЕРХСТАБИЛЬНЫЙ СЕРВЕР DUCKDUCKGO (БЕЗ ОШИБОК ССЫЛКИ)
+# ОБЩЕНИЕ ЧЕРЕЗ НАДЕЖНЫЙ СЕРВЕР HUGGING FACE
 @bot.message_handler(func=lambda message: True)
 def handle_ai_chat(message):
     user_text = message.text.strip()
@@ -94,40 +80,29 @@ def handle_ai_chat(message):
     bot.send_chat_action(message.chat.id, 'typing')
     
     try:
+        # Прямой запрос к стабильной открытой модели Qwen
+        API_URL = "https://huggingface.co"
+        headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+        
         system_prompt = "Ты — полезный, умный и вежливый ИИ-ассистент. Отвечай на вопросы пользователя подробно, грамотно и дружелюбно на русском языке."
-
-        # 1. Получаем технический токен от DuckDuckGo
-        headers = {"x-client-variant": "chat", "User-Agent": "Mozilla/5.0"}
-        res = requests.get("https://duckduckgo.com", headers=headers, timeout=10)
-        v_token = res.headers.get("x-vqd-accept")
-
-        # 2. Отправляем запрос к мощной свободной модели gpt-4o-mini
+        
         payload = {
-            "model": "gpt-4o-mini",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": clean_text}
-            ]
+            "inputs": f"<|im_start|>system\n{system_prompt}<|im_end|>\n<|im_start|>user\n{clean_text}<|im_end|>\n<|im_start|>assistant\n",
+            "parameters": {"max_new_tokens": 500, "return_full_text": False}
         }
-        headers["x-vqd-4"] = v_token
-        headers["Content-Type"] = "application/json"
         
-        response = requests.post("https://duckduckgo.com", headers=headers, json=payload, timeout=15)
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=20)
         
-        # Декодируем потоковый ответ сервера DuckDuckGo
-        lines = response.text.split("\n")
-        ai_response = ""
-        for line in lines:
-            if line.startswith("data:"):
-                try:
-                    data_json = json.loads(line[5:])
-                    if "message" in data_json:
-                        ai_response += data_json["message"]
-                except:
-                    pass
-        
-        if not ai_response:
-            ai_response = "Извините, не удалось получить осмысленный ответ. Попробуйте еще раз."
+        if response.status_code == 200:
+            result = response.json()
+            if isinstance(result, list) and len(result) > 0 and 'generated_text' in result[0]:
+                ai_response = result[0]['generated_text'].strip()
+            elif isinstance(result, dict) and 'generated_text' in result:
+                ai_response = result['generated_text'].strip()
+            else:
+                ai_response = "Извините, не удалось распознать ответ нейросети. Попробуйте еще раз."
+        else:
+            ai_response = "Извините, сервер временно занят. Пожалуйста, отправьте сообщение еще раз через пару секунд."
             
         bot.reply_to(message, ai_response)
         

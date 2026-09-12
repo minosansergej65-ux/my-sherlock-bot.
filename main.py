@@ -5,13 +5,13 @@ from flask import Flask, request
 
 # ТВОЙ ТОКЕН ТЕЛЕГРАМ
 TELEGRAM_TOKEN = '8836578040:AAF2PsdNon7Avua_8k9cOx4aLtk1hzKu3do'
-# ТВОЙ РАБОЧИЙ API КЛЮЧ PROXYAPI
-API_KEY = 'sk-IGg2YLIiseBekLCLpkK1g88XaghYW4Oy'
+# ТВОЙ НОВЫЙ ОПЛАЧЕННЫЙ КЛЮЧ PROXYAPI
+API_KEY = 'sk-8FfUrRpLf44VMFVXvhQj'
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 app = Flask(__name__)
 
-# Прием сообщений через вебхук
+# Прием сообщений через вебхук (обязательно для стабильности на Render)
 @app.route('/' + TELEGRAM_TOKEN, methods=['POST'])
 def getMessage():
     json_string = request.get_data().decode('utf-8')
@@ -83,7 +83,7 @@ def handle_ai_chat(message):
     bot.send_chat_action(message.chat.id, 'typing')
     
     try:
-        # ЖЕСТКО ПРОПИСЫВАЕМ ОФИЦИАЛЬНЫЙ СЕРВЕР PROXYAPI
+        # Точный рабочий адрес шлюза ProxyAPI
         url = "https://proxyapi.ru"
             
         headers = {
@@ -106,7 +106,7 @@ def handle_ai_chat(message):
             result = response.json()
             ai_response = result['choices']['message']['content'].strip()
         else:
-            ai_response = f"❌ Ошибка ProxyAPI (Код {response.status_code}). Пожалуйста, убедись, что на сайте proxyapi.ru пополнен баланс личного кабинета."
+            ai_response = f"❌ Ошибка ProxyAPI (Код {response.status_code}). Убедись, что баланс в личном кабинете proxyapi.ru действительно зачислился."
             
         bot.reply_to(message, ai_response)
         

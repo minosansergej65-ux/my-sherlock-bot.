@@ -1,12 +1,10 @@
 import telebot
 import requests
 import os
-import base64
-import io
 from flask import Flask, request
 
 # ==========================================
-# НАСТРОЙКИ (КЛЮЧИ ВСТАВЛЕНЫ ЖЕСТКО ДЛЯ НАДЕЖНОСТИ)
+# НАСТРОЙКИ (КЛЮЧИ НАДЕЖНО ВСТАВЛЕНЫ)
 # ==========================================
 
 TELEGRAM_TOKEN = '8836578040:AAF2PsdNon7Avua_8k9cOx4aLtk1hzKu3do'
@@ -41,22 +39,21 @@ def index():
 def send_welcome(message):
     welcome_text = (
         "🤖 Привет! Я AptekaAI.\n\n"
-        "💬 Просто напиши мне вопрос — я отвечу.\n\n"
-        "🎨 Генерация изображений:\n"
+        "💬 Просто напиши мне вопрос — я отвечу (это стоит копейки!).\n\n"
+        "🎨 **Бесплатные картинки:**\n"
         "/img кот в космосе\n\n"
-        "✨ Для генерации используются модели ProxyAPI."
+        "✨ Картинки теперь на 100% бесплатны и не тратят твой баланс!"
     )
     bot.reply_to(message, welcome_text)
 
 
 # ==========================================
-# ГЕНЕРАЦИЯ ИЗОБРАЖЕНИЯ ЧЕРЕЗ PROXYAPI (ВАШ ВАРИАНТ)
+# 🎨 100% БЕСПЛАТНАЯ ГЕНЕРАЦИЯ КАРТИНОК (СПАСАЕМ БАЛАНС!)
 # ==========================================
 
 @bot.message_handler(commands=['img'])
 def handle_image_generation(message):
     BOT_USERNAME = bot.get_me().username
-
     prompt = message.text.replace('/img', '', 1)
 
     if BOT_USERNAME:
@@ -68,117 +65,44 @@ def handle_image_generation(message):
         bot.reply_to(
             message,
             "❌ Напиши описание картинки.\n\n"
-            "Пример:\n"
-            "/img реалистичный кот на крыше Парижа ночью"
+            "Например:\n"
+            "/img красивый закат в горах"
         )
         return
 
     bot.send_chat_action(message.chat.id, 'upload_photo')
-
     status_message = bot.reply_to(
         message,
-        "🎨 Генерирую изображение...\n"
-        "⏳ Подожди немного..."
+        "🎨 Рисую изображение на бесплатном сервере...\n⏳ Это займет около 5-10 секунд."
     )
 
     try:
-        url = "https://api.proxyapi.ru/v1/images/generations"
-
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {API_KEY}"
-        }
-
-        # Используется модель и параметры из вашего запроса
-        payload = {
-            "model": "openai/gpt-image-2",
-            "prompt": prompt,
-            "quality": "high",
-            "size": "1024x1024",
-            "output_format": "jpeg",
-            "output_compression": 90,
-            "n": 1
-        }
-
-        response = requests.post(
-            url,
-            headers=headers,
-            json=payload,
-            timeout=300
-        )
-
-        print("PROXYAPI STATUS:", response.status_code)
-        print("PROXYAPI RESPONSE:", response.text[:2000])
-
-        if response.status_code != 200:
-            bot.edit_message_text(
-                f"❌ ProxyAPI вернул ошибку: {response.status_code}\n\n"
-                f"{response.text[:1000]}",
-                message.chat.id,
-                status_message.message_id
-            )
-            return
-
-        result = response.json()
-
-        if "data" not in result:
-            raise Exception(
-                f"В ответе ProxyAPI нет поля data: {result}"
-            )
-
-        if not result["data"]:
-            raise Exception(
-                f"ProxyAPI вернул пустой data: {result}"
-            )
-
-        if "b64_json" not in result["data"][0]:
-            raise Exception(
-                f"В ответе нет b64_json: {result}"
-            )
-
-        image_base64 = result["data"][0]["b64_json"]
-
-        image_bytes = base64.b64decode(image_base64)
-
-        image_file = io.BytesIO(image_bytes)
-        image_file.name = "generated.jpg"
-
+        import urllib.parse
+        encoded_prompt = urllib.parse.quote(prompt)
+        
+        # Подключаем самый мощный БЕСПЛАТНЫЙ движок Flux
+        image_url = f"https://pollinations.ai{encoded_prompt}&width=1024&height=1024&seed=42&nofeed=true"
+        
+        img_data = requests.get(image_url).content
+        
         try:
-            bot.delete_message(
-                message.chat.id,
-                status_message.message_id
-            )
-        except Exception:
+            bot.delete_message(message.chat.id, status_message.message_id)
+        except:
             pass
 
-        bot.send_photo(
-            message.chat.id,
-            image_file,
-            caption=f"✨ Готово!\n\n📝 {prompt}"
-        )
+        bot.send_photo(message.chat.id, img_data, caption=f"✨ Готово бесплатно!\n\n📝 {prompt}")
 
     except Exception as e:
-        print("================================")
-        print("IMAGE GENERATION ERROR:")
-        print(repr(e))
-        print("================================")
-
-        try:
-            bot.edit_message_text(
-                "❌ Ошибка при генерации.\n\n"
-                f"Причина: {str(e)[:1000]}",
-                message.chat.id,
-                status_message.message_id
-            )
-        except Exception:
-            bot.reply_to(
-                message,
-                f"❌ Ошибка: {str(e)[:1000]}"
-            )
+        print("IMAGE GENERATION ERROR:", e)
+        bot.edit_message_text(
+            "❌ Произошла ошибка при генерации изображения.\nПопробуйте ещё раз.",
+            message.chat.id,
+            status_message.message_id
+        )
 
 
 # ==========================================
-# ТЕКСТОВЫЙ ИИ (ОФИЦИАЛЬНЫЙ PROXYAPI С ОБНОВЛЕННОЙ ССЫЛКОЙ)
+# ТЕКСТОВЫЙ ИИ (ОЧЕНЬ ДЕШЕВЫЙ CHATGPT)
 # ==========================================
 
 @bot.message_handler(func=lambda message: True)
@@ -209,7 +133,7 @@ def handle_ai_chat(message):
         bot.reply_to(message, "Я здесь! Чем могу помочь?")
         return
 
-    # Быстрое фирменное приветствие
+    # Быстрое фирменное приветствие (тоже бесплатно)
     if clean_text.lower() in ["привет", "привееет", "приветик", "hi", "hello"]:
         bot.reply_to(message, "Привет, я AptekaAI! 🤖 Чем могу помочь?")
         return
@@ -217,7 +141,6 @@ def handle_ai_chat(message):
     bot.send_chat_action(message.chat.id, 'typing')
 
     try:
-        # Ссылка с префиксом /v1 для единого формата шлюза
         url = "https://proxyapi.ru"
 
         headers = {
@@ -225,7 +148,7 @@ def handle_ai_chat(message):
             "Authorization": f"Bearer {API_KEY}"
         }
 
-        # Модель указана с правильным вендором по новым правилам
+        # Самая экономичная и умная модель gpt-4o-mini
         payload = {
             "model": "openai/gpt-4o-mini",
             "messages": [
@@ -249,7 +172,7 @@ def handle_ai_chat(message):
             bot.reply_to(message, ai_response)
         else:
             print("TEXT API ERROR:", response.status_code, response.text)
-            bot.reply_to(message, f"❌ Ошибка шлюза ИИ (код {response.status_code}). Проверьте баланс на сайте proxyapi.ru.")
+            bot.reply_to(message, f"❌ Ошибка шлюза ИИ. Проверьте баланс на сайте proxyapi.ru.")
 
     except Exception as e:
         print("TEXT ERROR:", e)

@@ -5,13 +5,13 @@ from flask import Flask, request
 
 # ТВОЙ ТОКЕН ТЕЛЕГРАМ
 TELEGRAM_TOKEN = '8836578040:AAF2PsdNon7Avua_8k9cOx4aLtk1hzKu3do'
-# ТВОЙ НОВЫЙ АКТИВНЫЙ API КЛЮЧ PROXYAPI
+# ТВОЙ АКТИВНЫЙ API КЛЮЧ PROXYAPI
 API_KEY = 'sk-fqLxyf8Vypai3VQoXBDwpYp6YLpVETiB'
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 app = Flask(__name__)
 
-# Прием сообщений через вебхук (обязательно для стабильности на Render)
+# Прием сообщений через вебхук
 @app.route('/' + TELEGRAM_TOKEN, methods=['POST'])
 def getMessage():
     json_string = request.get_data().decode('utf-8')
@@ -21,7 +21,7 @@ def getMessage():
 
 @app.route("/")
 def index():
-    return "Официальный ИИ-сервер запущен и работает нормально!", 200
+    return "Официальный ИИ-сервер запущен!", 200
 
 # КОМАНДА /START
 @bot.message_handler(commands=['start'])
@@ -57,7 +57,7 @@ def handle_image_generation(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Не удалось сгенерировать картинку. Попробуйте изменить запрос.")
 
-# ЧАТ С ОФИЦИАЛЬНЫМ CHATGPT (ЧЕРЕЗ ОБНОВЛЕННЫЙ ЕДИНЫЙ API)
+# ЧАТ С ОФИЦИАЛЬНЫМ CHATGPT (ИСПРАВЛЕННЫЙ ПАРСИНГ ОТВЕТА)
 @bot.message_handler(func=lambda message: True)
 def handle_ai_chat(message):
     user_text = message.text.strip()
@@ -83,8 +83,7 @@ def handle_ai_chat(message):
     bot.send_chat_action(message.chat.id, 'typing')
     
     try:
-        # ОБНОВЛЕННЫЙ ЕДИНЫЙ АДРЕС PROXYAPI ДЛЯ ВСЕХ МОДЕЛЕЙ (АКТУАЛЬНО ДЛЯ 2026 ГОДА)
-        url = "https://api.proxyapi.ru/v1/chat/completions"
+        url = "https://proxyapi.ru"
             
         headers = {
             "Content-Type": "application/json",
@@ -92,7 +91,7 @@ def handle_ai_chat(message):
         }
         
         payload = {
-            "model": "openai/gpt-4o-mini", # Указываем модель через единый префикс каталога
+            "model": "gpt-4o-mini",
             "messages": [
                 {"role": "system", "content": "Ты — полезный, умный и вежливый ИИ-ассистент. Отвечай на вопросы пользователя подробно, грамотно и дружелюбно на русском языке."},
                 {"role": "user", "content": clean_text}
@@ -104,9 +103,10 @@ def handle_ai_chat(message):
         
         if response.status_code == 200:
             result = response.json()
-            ai_response = result['choices']['message']['content'].strip()
+            # ПРАВИЛЬНЫЙ ИСПРАВЛЕННЫЙ СПУСК К ТЕКСТУ ОТВЕТА
+            ai_response = result['choices'][0]['message']['content'].strip()
         else:
-            ai_response = f"❌ Ошибка шлюза ИИ (Код {response.status_code}). Пожалуйста, убедись, что баланс аккаунта на сайте действительно активен."
+            ai_response = f"❌ Ошибка ProxyAPI (Код {response.status_code}). Пожалуйста, проверьте баланс на сайте proxyapi.ru."
             
         bot.reply_to(message, ai_response)
         

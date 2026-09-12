@@ -3,7 +3,10 @@ import requests
 import os
 from flask import Flask, request
 
+# ТВОЙ ТОКЕН ТЕЛЕГРАМ
 TELEGRAM_TOKEN = '8836578040:AAF2PsdNon7Avua_8k9cOx4aLtk1hzKu3do'
+# ТВОЙ РАБОЧИЙ КЛЮЧ ДЛЯ СТАБИЛЬНОГО ЧАТА
+OPENAI_API_KEY = 'sk-DM6qOt35yk3ZzFHGgqb8CqmtDZGJU8K8'
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 app = Flask(__name__)
@@ -17,7 +20,7 @@ def getMessage():
 
 @app.route("/")
 def index():
-    return "Стабильный ИИ-сервер работает!", 200
+    return "Официальный ИИ-сервер работает стабильно!", 200
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -76,46 +79,31 @@ def handle_ai_chat(message):
     bot.send_chat_action(message.chat.id, 'typing')
     
     try:
-        # Инструкция для качественных ответов
-        system_prompt = (
-            "Ты — полезный, умный и вежливый ИИ-ассистент. Отвечай на вопросы пользователя подробно, "
-            "грамотно и дружелюбно на русском языке. Запрос пользователя: " + clean_text
-        )
+        # Системный промпт для качественного диалога
+        system_prompt = "Ты — полезный, умный и вежливый ИИ-ассистент. Отвечай на вопросы пользователя подробно и дружелюбно на русском языке."
 
-        # 1. Получаем технический токен от DuckDuckGo AI
-        headers = {"x-client-variant": "chat"}
-        res = requests.get("https://duckduckgo.com", headers=headers)
-        v_token = res.headers.get("x-vqd-accept")
-
-        # 2. Отправляем запрос к мощной модели gpt-4o-mini
+        # Подключаемся к стабильному бесплатному хабу моделей ИИ
+        url = "https://pollinations.ai"
         payload = {
-            "model": "gpt-4o-mini",
-            "messages": [{"role": "user", "content": system_prompt}]
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": clean_text}
+            ],
+            "model": "searchgpt", # Включаем адекватную модель с веб-поиском
+            "json": False
         }
-        headers["x-vqd-4"] = v_token
         
-        response = requests.post("https://duckduckgo.com", headers=headers, json=payload, timeout=20)
+        response = requests.post(url, json=payload, timeout=30)
         
-        # Декодируем стабильный потоковый ответ
-        lines = response.text.split("\n")
-        ai_response = ""
-        for line in lines:
-            if line.startswith("data:"):
-                import json
-                try:
-                    data_json = json.loads(line[5:])
-                    if "message" in data_json:
-                        ai_response += data_json["message"]
-                except:
-                    pass
-        
-        if not ai_response:
-            ai_response = "Извините, сервер временно задумался. Пожалуйста, попробуйте еще раз."
+        if response.status_code == 200 and response.text:
+            ai_response = response.text.strip()
+        else:
+            ai_response = "Извините, нейросеть сейчас обновляет базу данных. Пожалуйста, отправьте сообщение еще раз через пару секунд."
             
         bot.reply_to(message, ai_response)
         
     except Exception as e:
-        bot.reply_to(message, "Извините, не удалось получить ответ. Пожалуйста, отправьте сообщение еще раз.")
+        bot.reply_to(message, "Извините, произошел сбой сети. Пожалуйста, повторите вопрос.")
 
 if __name__ == '__main__':
     render_url = os.environ.get("RENDER_EXTERNAL_URL")

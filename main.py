@@ -8,6 +8,7 @@ from flask import Flask, request
 # ==========================================
 
 TELEGRAM_TOKEN = '8836578040:AAF2PsdNon7Avua_8k9cOx4aLtk1hzKu3do'
+# ТВОЙ НАСТОЯЩИЙ СВЕЖИЙ API КЛЮЧ
 API_KEY = 'sk-fqLxyf8Vypai3VQoXBDwpYp6YLpVETiB'
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
@@ -28,7 +29,7 @@ def getMessage():
 
 @app.route("/")
 def index():
-    return "Официальный ИИ-сервер запущен!", 200
+    return "Официальный ИИ-сервер запущен и работает!", 200
 
 
 # ==========================================
@@ -48,7 +49,7 @@ def send_welcome(message):
 
 
 # ==========================================
-# 🎨 100% БЕСПЛАТНАЯ ГЕНЕРАЦИЯ КАРТИНОК (СПАСАЕМ БАЛАНС!)
+# 🎨 100% БЕСПЛАТНАЯ ГЕНЕРАЦИЯ КАРТИНОК
 # ==========================================
 
 @bot.message_handler(commands=['img'])
@@ -80,9 +81,8 @@ def handle_image_generation(message):
         import urllib.parse
         encoded_prompt = urllib.parse.quote(prompt)
         
-        # Подключаем самый мощный БЕСПЛАТНЫЙ движок Flux
+        # Полностью бесплатный Flux
         image_url = f"https://pollinations.ai{encoded_prompt}&width=1024&height=1024&seed=42&nofeed=true"
-        
         img_data = requests.get(image_url).content
         
         try:
@@ -102,7 +102,7 @@ def handle_image_generation(message):
 
 
 # ==========================================
-# ТЕКСТОВЫЙ ИИ (ОЧЕНЬ ДЕШЕВЫЙ CHATGPT)
+# ТЕКСТОВЫЙ ИИ (ОФИЦИАЛЬНЫЙ PROXYAPI - ИСПРАВЛЕНО)
 # ==========================================
 
 @bot.message_handler(func=lambda message: True)
@@ -133,7 +133,7 @@ def handle_ai_chat(message):
         bot.reply_to(message, "Я здесь! Чем могу помочь?")
         return
 
-    # Быстрое фирменное приветствие (тоже бесплатно)
+    # Быстрое фирменное приветствие
     if clean_text.lower() in ["привет", "привееет", "приветик", "hi", "hello"]:
         bot.reply_to(message, "Привет, я AptekaAI! 🤖 Чем могу помочь?")
         return
@@ -148,9 +148,9 @@ def handle_ai_chat(message):
             "Authorization": f"Bearer {API_KEY}"
         }
 
-        # Самая экономичная и умная модель gpt-4o-mini
+        # ИСПРАВЛЕНО: Убрали лишний префикс. Теперь модель называется строго gpt-4o-mini
         payload = {
-            "model": "openai/gpt-4o-mini",
+            "model": "gpt-4o-mini",
             "messages": [
                 {
                     "role": "system",
@@ -172,7 +172,7 @@ def handle_ai_chat(message):
             bot.reply_to(message, ai_response)
         else:
             print("TEXT API ERROR:", response.status_code, response.text)
-            bot.reply_to(message, f"❌ Ошибка шлюза ИИ. Проверьте баланс на сайте proxyapi.ru.")
+            bot.reply_to(message, f"❌ Ошибка шлюза ИИ (код {response.status_code}). Проверьте баланс на сайте proxyapi.ru.")
 
     except Exception as e:
         print("TEXT ERROR:", e)

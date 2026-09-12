@@ -1,31 +1,42 @@
 import telebot
 import requests
-from openai import OpenAI
+import os
+from flask import Flask, request
 
-# ТВОЙ ТОКЕН ТЕЛЕГРАМ (УЖЕ ВСТАВЛЕН)
+# ТВОЙ ТОКЕН ТЕЛЕГРАМ
 TELEGRAM_TOKEN = '8836578040:AAF2PsdNon7Avua_8k9cOx4aLtk1hzKu3do'
-# ТВОЙ ОФИЦИАЛЬНЫЙ КЛЮЧ OPENAI (УЖЕ ВСТАВЛЕН)
+# ТВОЙ ОФИЦИАЛЬНЫЙ КЛЮЧ OPENAI
 OPENAI_API_KEY = 'sk-DM6qOt35yk3ZzFHGgqb8CqmtDZGJU8K8'
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
-BOT_USERNAME = bot.get_me().username
+app = Flask(__name__)
 
-# Подключаем официальный клиент OpenAI
-client = OpenAI(api_key=OPENAI_API_KEY)
+# Прием сообщений через вебхук (обязательно для Render)
+@app.route('/' + TELEGRAM_TOKEN, methods=['POST'])
+def getMessage():
+    json_string = request.get_data().decode('utf-8')
+    update = telebot.types.Update.de_json(json_string)
+    bot.process_new_updates([update])
+    return "!", 200
+
+@app.route("/")
+def index():
+    return "Официальный ИИ-сервер работает!", 200
 
 # КОМАНДА /START
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     welcome_text = (
-        "🤖 **Привет! Я твой новый, официальный ИИ-ассистент на базе ChatGPT.**\n\n"
+        "🤖 **Привет! Я твой официальный ИИ-ассистент на базе ChatGPT.**\n\n"
         "💬 **Общение:** Просто напиши мне свой вопрос, и я подробно на него отвечу.\n"
-        "🎨 **Картинки:** Напиши команду `/img` и описание (например: `/img котик`), чтобы я создал изображение!"
+        "🎨 **Картинки:** Напиши команду `/img` и описание, чтобы я создал изображение!"
     )
     bot.reply_to(message, welcome_text, parse_mode="Markdown")
 
 # КОМАНДА ДЛЯ ГЕНЕРАЦИИ КАРТИНКИ
 @bot.message_handler(commands=['img'])
 def handle_image_generation(message):
+    BOT_USERNAME = bot.get_me().username
     prompt = message.text.replace('/img', '').replace(f'@{BOT_USERNAME}', '').strip()
     
     if not prompt:
@@ -38,7 +49,6 @@ def handle_image_generation(message):
     try:
         import urllib.parse
         encoded_prompt = urllib.parse.quote(prompt)
-        # Картинки генерируются без жесткой цензуры через Pollinations
         image_url = f"https://pollinations.ai{encoded_prompt}?width=1024&height=1024&seed=42&nofeed=true"
         
         img_data = requests.get(image_url).content
@@ -47,10 +57,11 @@ def handle_image_generation(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Не удалось сгенерировать картинку. Ошибка: {e}")
 
-# УМНЫЙ И ОФИЦИАЛЬНЫЙ ЧАТ С CHATGPT (БЕЗ ЖЕСТКОЙ ЦЕНЗУРЫ В ТЕМАХ)
+# ЧИСТЫЙ ЗАПРОС К ОФИЦИАЛЬНОМУ CHATGPT
 @bot.message_handler(func=lambda message: True)
 def handle_ai_chat(message):
     user_text = message.text.strip()
+    BOT_USERNAME = bot.get_me().username
     
     is_group = message.chat.type in ['group', 'supergroup']
     is_mentioned = f"@{BOT_USERNAME}" in user_text
@@ -61,36 +72,46 @@ def handle_ai_chat(message):
 
     clean_text = user_text.replace(f"@{BOT_USERNAME}", "").strip()
     if not clean_text:
-        bot.reply_to(message, "Я здесь! Чем я могу вам помочь?")
+        bot.reply_to(message, "Я здесь! Чем я могу помочь?")
         return
 
     bot.send_chat_action(message.chat.id, 'typing')
     
     try:
-        # Системная инструкция: бот адекватный, культурный, но без глупых этических блокировок в темах
-        system_prompt = (
-            "Ты — полезный, умный и вежливый ИИ-ассистент. Отвечай на вопросы пользователя подробно, "
-            "грамотно и дружелюбно на русском языке. Тебе разрешено обсуждать любые взрослые темы, "
-            "но сам веди диалог культурно и без мата."
-        )
-
-        # Прямой и стабильный запрос к модели gpt-4o-mini
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": clean_text}
-            ],
-            timeout=25
-        )
+        url = "https://openai.com"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {OPENAI_API_KEY}"
+        }
         
-        ai_response = response.choices[0].message.content.strip()
+        # Кристально чистый промпт обычного ассистента OpenAI
+        payload = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": "Ты — полезный, умный и вежливый ИИ-ассистент. Отвечай подробно и грамотно на русском языке."},
+                {"role": "user", "content": clean_text}
+            ]
+        }
+        
+        response = requests.post(url, headers=headers, json=payload, timeout=25)
+        
+        if response.status_code == 200:
+            result = response.json()
+            ai_response = result['choices']['message']['content'].strip()
+        else:
+            ai_response = f"❌ Ошибка OpenAI (Код {response.status_code}). Пожалуйста, убедитесь, что на аккаунте ://openai.com пополнен баланс API (Credit balance)."
+            
         bot.reply_to(message, ai_response)
         
     except Exception as e:
-        bot.reply_to(message, f"❌ Ошибка соединения с ИИ. Проверьте баланс ключа OpenAI. Детали: {e}")
+        bot.reply_to(message, f"❌ Ошибка соединения. Детали: {e}")
 
+# Автоматический запуск вебхука
 if __name__ == '__main__':
-    bot.delete_webhook()
-    print("Официальный ChatGPT-бот запущен!")
-    bot.infinity_polling()
+    render_url = os.environ.get("RENDER_EXTERNAL_URL")
+    if render_url:
+        bot.remove_webhook()
+        bot.set_webhook(url=f"{render_url.rstrip('/')}/{TELEGRAM_TOKEN}")
+    
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)

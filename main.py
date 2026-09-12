@@ -1,17 +1,17 @@
 import telebot
 import requests
 import os
-import json
 from flask import Flask, request
 
 # ТВОЙ ТОКЕН ТЕЛЕГРАМ
 TELEGRAM_TOKEN = '8836578040:AAF2PsdNon7Avua_8k9cOx4aLtk1hzKu3do'
-# НАДЕЖНЫЙ БЕСПЛАТНЫЙ КЛЮЧ ДЛЯ СТАБИЛЬНОГО ЧАТА
-HF_API_KEY = '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'
+# ТВОЙ НОВЫЙ РАБОЧИЙ API КЛЮЧ
+API_KEY = 'sk-IGg2YLIiseBekLCLpkK1g88XaghYW4Oy'
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 app = Flask(__name__)
 
+# Прием сообщений через вебхук (обязательно для стабильности на Render)
 @app.route('/' + TELEGRAM_TOKEN, methods=['POST'])
 def getMessage():
     json_string = request.get_data().decode('utf-8')
@@ -21,12 +21,13 @@ def getMessage():
 
 @app.route("/")
 def index():
-    return "Официальный ИИ-сервер работает стабильно!", 200
+    return "Официальный ИИ-сервер запущен и работает нормально!", 200
 
+# КОМАНДА /START
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     welcome_text = (
-        "🤖 **Привет! Я твой новый, стабильный ИИ-помощник.**\n\n"
+        "🤖 **Привет! Я твой новый, официальный ИИ-ассистент на базе ChatGPT.**\n\n"
         "💬 **Общение:** Просто напиши мне свой вопрос, и я подробно на него отвечу.\n"
         "🎨 **Картинки:** Напиши команду `/img` и описание (например: `/img котик`), чтобы я создал изображение!"
     )
@@ -49,12 +50,14 @@ def handle_image_generation(message):
         import urllib.parse
         encoded_prompt = urllib.parse.quote(prompt)
         image_url = f"https://pollinations.ai{encoded_prompt}&nofeed=true"
+        
         img_data = requests.get(image_url).content
         bot.send_photo(message.chat.id, img_data, caption=f"✨ Готово по запросу: {prompt}")
+        
     except Exception as e:
         bot.reply_to(message, f"❌ Не удалось сгенерировать картинку. Попробуйте изменить запрос.")
 
-# ОБЩЕНИЕ ЧЕРЕЗ НАДЕЖНЫЙ СЕРВЕР HUGGING FACE
+# ЧАТ С ОФИЦИАЛЬНЫМ CHATGPT (ЧЕРЕЗ ТВОЙ КЛЮЧ)
 @bot.message_handler(func=lambda message: True)
 def handle_ai_chat(message):
     user_text = message.text.strip()
@@ -80,35 +83,40 @@ def handle_ai_chat(message):
     bot.send_chat_action(message.chat.id, 'typing')
     
     try:
-        # Прямой запрос к стабильной открытой модели Qwen
-        API_URL = "https://huggingface.co"
-        headers = {"Authorization": f"Bearer {HF_API_KEY}"}
-        
-        system_prompt = "Ты — полезный, умный и вежливый ИИ-ассистент. Отвечай на вопросы пользователя подробно, грамотно и дружелюбно на русском языке."
-        
-        payload = {
-            "inputs": f"<|im_start|>system\n{system_prompt}<|im_end|>\n<|im_start|>user\n{clean_text}<|im_end|>\n<|im_start|>assistant\n",
-            "parameters": {"max_new_tokens": 500, "return_full_text": False}
+        # Автоматически определяем, какой шлюз используется по формату ключа VseGPT
+        if "vsegpt" in API_KEY or API_KEY.startswith("sk-vse"):
+            url = "https://vsegpt.ru"
+        else:
+            url = "https://proxyapi.ru"
+            
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {API_KEY}"
         }
         
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=20)
+        payload = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": "Ты — полезный, умный и вежливый ИИ-ассистент. Отвечай на вопросы пользователя подробно, грамотно и дружелюбно на русском языке."},
+                {"role": "user", "content": clean_text}
+            ],
+            "temperature": 0.7
+        }
+        
+        response = requests.post(url, headers=headers, json=payload, timeout=25)
         
         if response.status_code == 200:
             result = response.json()
-            if isinstance(result, list) and len(result) > 0 and 'generated_text' in result[0]:
-                ai_response = result[0]['generated_text'].strip()
-            elif isinstance(result, dict) and 'generated_text' in result:
-                ai_response = result['generated_text'].strip()
-            else:
-                ai_response = "Извините, не удалось распознать ответ нейросети. Попробуйте еще раз."
+            ai_response = result['choices']['message']['content'].strip()
         else:
-            ai_response = "Извините, сервер временно занят. Пожалуйста, отправьте сообщение еще раз через пару секунд."
+            ai_response = f"❌ Ошибка шлюза ИИ (Код {response.status_code}). Пожалуйста, убедись, что ты пополнил баланс личного кабинета, где покупал ключ."
             
         bot.reply_to(message, ai_response)
         
     except Exception as e:
-        bot.reply_to(message, "Извините, произошел сбой сети. Пожалуйста, повторите вопрос чуть позже.")
+        bot.reply_to(message, f"❌ Ошибка соединения с ИИ. Детали: {e}")
 
+# Автоматический запуск вебхука
 if __name__ == '__main__':
     render_url = os.environ.get("RENDER_EXTERNAL_URL")
     if render_url:

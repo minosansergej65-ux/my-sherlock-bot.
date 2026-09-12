@@ -5,8 +5,6 @@ from flask import Flask, request
 
 # ТВОЙ ТОКЕН ТЕЛЕГРАМ
 TELEGRAM_TOKEN = '8836578040:AAF2PsdNon7Avua_8k9cOx4aLtk1hzKu3do'
-# ТВОЙ РАБОЧИЙ КЛЮЧ ДЛЯ СТАБИЛЬНОГО ЧАТА
-OPENAI_API_KEY = 'sk-DM6qOt35yk3ZzFHGgqb8CqmtDZGJU8K8'
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 app = Flask(__name__)
@@ -79,18 +77,16 @@ def handle_ai_chat(message):
     bot.send_chat_action(message.chat.id, 'typing')
     
     try:
-        # Системный промпт для качественного диалога
-        system_prompt = "Ты — полезный, умный и вежливый ИИ-ассистент. Отвечай на вопросы пользователя подробно и дружелюбно на русском языке."
+        system_prompt = "Ты — полезный, умный и вежливый ИИ-ассистент. Отвечай на вопросы пользователя подробно, грамотно и дружелюбно на русском языке."
 
-        # Подключаемся к стабильному бесплатному хабу моделей ИИ
+        # Отправляем чистый POST-запрос к сверхстабильной модели gpt-4o-mini
         url = "https://pollinations.ai"
         payload = {
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": clean_text}
             ],
-            "model": "searchgpt", # Включаем адекватную модель с веб-поиском
-            "json": False
+            "model": "gpt-4o-mini"
         }
         
         response = requests.post(url, json=payload, timeout=30)
@@ -98,7 +94,7 @@ def handle_ai_chat(message):
         if response.status_code == 200 and response.text:
             ai_response = response.text.strip()
         else:
-            ai_response = "Извините, нейросеть сейчас обновляет базу данных. Пожалуйста, отправьте сообщение еще раз через пару секунд."
+            ai_response = "Извините, нейросеть сейчас обновляет свои алгоритмы. Пожалуйста, отправьте сообщение еще раз через пару секунд."
             
         bot.reply_to(message, ai_response)
         
@@ -113,3 +109,4 @@ if __name__ == '__main__':
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+

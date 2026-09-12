@@ -50,12 +50,13 @@ def send_welcome(message):
 
 
 # ==========================================
-# ГЕНЕРАЦИИ КАРТИНКИ (ИСПРАВЛЕНО НА БЕСПЛАТНЫЙ FLUX)
+# ГЕНЕРАЦИЯ ИЗОБРАЖЕНИЯ ЧЕРЕЗ PROXYAPI (ВАШ ВАРИАНТ)
 # ==========================================
 
 @bot.message_handler(commands=['img'])
 def handle_image_generation(message):
     BOT_USERNAME = bot.get_me().username
+
     prompt = message.text.replace('/img', '', 1)
 
     if BOT_USERNAME:
@@ -67,44 +68,117 @@ def handle_image_generation(message):
         bot.reply_to(
             message,
             "❌ Напиши описание картинки.\n\n"
-            "Например:\n"
+            "Пример:\n"
             "/img реалистичный кот на крыше Парижа ночью"
         )
         return
 
     bot.send_chat_action(message.chat.id, 'upload_photo')
+
     status_message = bot.reply_to(
         message,
         "🎨 Генерирую изображение...\n"
-        "⏳ Это может занять некоторое время."
+        "⏳ Подожди немного..."
     )
 
     try:
-        # Переключили на бесплатный неубиваемый Flux, чтобы не тратить твои 500 рублей на картинки
-        import urllib.parse
-        encoded_prompt = urllib.parse.quote(prompt)
-        image_url = f"https://pollinations.ai{encoded_prompt}&nofeed=true"
-        
-        img_data = requests.get(image_url).content
-        
+        url = "https://api.proxyapi.ru/v1/images/generations"
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {API_KEY}"
+        }
+
+        # Используется модель и параметры из вашего запроса
+        payload = {
+            "model": "openai/gpt-image-2",
+            "prompt": prompt,
+            "quality": "high",
+            "size": "1024x1024",
+            "output_format": "jpeg",
+            "output_compression": 90,
+            "n": 1
+        }
+
+        response = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=300
+        )
+
+        print("PROXYAPI STATUS:", response.status_code)
+        print("PROXYAPI RESPONSE:", response.text[:2000])
+
+        if response.status_code != 200:
+            bot.edit_message_text(
+                f"❌ ProxyAPI вернул ошибку: {response.status_code}\n\n"
+                f"{response.text[:1000]}",
+                message.chat.id,
+                status_message.message_id
+            )
+            return
+
+        result = response.json()
+
+        if "data" not in result:
+            raise Exception(
+                f"В ответе ProxyAPI нет поля data: {result}"
+            )
+
+        if not result["data"]:
+            raise Exception(
+                f"ProxyAPI вернул пустой data: {result}"
+            )
+
+        if "b64_json" not in result["data"][0]:
+            raise Exception(
+                f"В ответе нет b64_json: {result}"
+            )
+
+        image_base64 = result["data"][0]["b64_json"]
+
+        image_bytes = base64.b64decode(image_base64)
+
+        image_file = io.BytesIO(image_bytes)
+        image_file.name = "generated.jpg"
+
         try:
-            bot.delete_message(message.chat.id, status_message.message_id)
-        except:
+            bot.delete_message(
+                message.chat.id,
+                status_message.message_id
+            )
+        except Exception:
             pass
 
-        bot.send_photo(message.chat.id, img_data, caption=f"✨ Готово!\n\n📝 {prompt}")
+        bot.send_photo(
+            message.chat.id,
+            image_file,
+            caption=f"✨ Готово!\n\n📝 {prompt}"
+        )
 
     except Exception as e:
-        print("IMAGE GENERATION ERROR:", e)
-        bot.edit_message_text(
-            "❌ Произошла ошибка при генерации изображения.\nПопробуйте ещё раз.",
-            message.chat.id,
-            status_message.message_id
-        )
+        print("================================")
+        print("IMAGE GENERATION ERROR:")
+        print(repr(e))
+        print("================================")
+
+        try:
+            bot.edit_message_text(
+                "❌ Ошибка при генерации.\n\n"
+                f"Причина: {str(e)[:1000]}",
+                message.chat.id,
+                status_message.message_id
+            )
+        except Exception:
+            bot.reply_to(
+                message,
+                f"❌ Ошибка: {str(e)[:1000]}"
+            )
 
 
 # ==========================================
-# ТЕКСТОВЫЙ ИИ (ОФИЦИАЛЬНЫЙ PROXYAPI)
+# ТЕКСТОВЫЙ ИИ (ОФИЦИАЛЬНЫЙ PROXYAPI С ОБНОВЛЕННОЙ ССЫЛКОЙ)
 # ==========================================
 
 @bot.message_handler(func=lambda message: True)
@@ -143,15 +217,15 @@ def handle_ai_chat(message):
     bot.send_chat_action(message.chat.id, 'typing')
 
     try:
-        # Исправленный точный URL Единого API ProxyAPI
-        url = "https://api.proxyapi.ru/v1/chat/completions"
+        # Ссылка с префиксом /v1 для единого формата шлюза
+        url = "https://proxyapi.ru"
 
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {API_KEY}"
         }
 
-        # Исправлено имя модели на правильное по новым правилам шлюза
+        # Модель указана с правильным вендором по новым правилам
         payload = {
             "model": "openai/gpt-4o-mini",
             "messages": [

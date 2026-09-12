@@ -5,13 +5,13 @@ from flask import Flask, request
 
 # ТВОЙ ТОКЕН ТЕЛЕГРАМ
 TELEGRAM_TOKEN = '8836578040:AAF2PsdNon7Avua_8k9cOx4aLtk1hzKu3do'
-# ТВОЙ НОВЫЙ АКТИВНЫЙ API КЛЮЧ PROXYAPI (ОБНОВЛЕН)
+# ТВОЙ НОВЫЙ АКТИВНЫЙ API КЛЮЧ PROXYAPI
 API_KEY = 'sk-fqLxyf8Vypai3VQoXBDwpYp6YLpVETiB'
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 app = Flask(__name__)
 
-# Прием сообщений через вебхук
+# Прием сообщений через вебхук (обязательно для стабильности на Render)
 @app.route('/' + TELEGRAM_TOKEN, methods=['POST'])
 def getMessage():
     json_string = request.get_data().decode('utf-8')
@@ -57,7 +57,7 @@ def handle_image_generation(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Не удалось сгенерировать картинку. Попробуйте изменить запрос.")
 
-# ЧАТ С ОФИЦИАЛЬНЫМ CHATGPT (ЧЕРЕЗ КЛЮЧ PROXYAPI)
+# ЧАТ С ОФИЦИАЛЬНЫМ CHATGPT (ЧЕРЕЗ ОБНОВЛЕННЫЙ ЕДИНЫЙ API)
 @bot.message_handler(func=lambda message: True)
 def handle_ai_chat(message):
     user_text = message.text.strip()
@@ -83,7 +83,8 @@ def handle_ai_chat(message):
     bot.send_chat_action(message.chat.id, 'typing')
     
     try:
-        url = "https://proxyapi.ru"
+        # ОБНОВЛЕННЫЙ ЕДИНЫЙ АДРЕС PROXYAPI ДЛЯ ВСЕХ МОДЕЛЕЙ (АКТУАЛЬНО ДЛЯ 2026 ГОДА)
+        url = "https://api.proxyapi.ru/v1/chat/completions"
             
         headers = {
             "Content-Type": "application/json",
@@ -91,7 +92,7 @@ def handle_ai_chat(message):
         }
         
         payload = {
-            "model": "gpt-4o-mini",
+            "model": "openai/gpt-4o-mini", # Указываем модель через единый префикс каталога
             "messages": [
                 {"role": "system", "content": "Ты — полезный, умный и вежливый ИИ-ассистент. Отвечай на вопросы пользователя подробно, грамотно и дружелюбно на русском языке."},
                 {"role": "user", "content": clean_text}
@@ -105,7 +106,7 @@ def handle_ai_chat(message):
             result = response.json()
             ai_response = result['choices']['message']['content'].strip()
         else:
-            ai_response = f"❌ Ошибка шлюза ИИ (Код {response.status_code}). Пожалуйста, проверьте баланс на сайте proxyapi.ru."
+            ai_response = f"❌ Ошибка шлюза ИИ (Код {response.status_code}). Пожалуйста, убедись, что баланс аккаунта на сайте действительно активен."
             
         bot.reply_to(message, ai_response)
         

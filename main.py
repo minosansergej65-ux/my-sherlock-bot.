@@ -68,31 +68,54 @@ def handle_ai_chat(message):
         bot.reply_to(message, "Я здесь! Чем я могу вам помочь?")
         return
 
+    # МГНОВЕННОЕ ФИРМЕННОЕ ПРИВЕТСТВИЕ
+    if clean_text.lower() in ["привет", "привееет", "приветик", "hi", "hello"]:
+        bot.reply_to(message, "Привет, я AptekaAi! 🤖 Чем могу помочь?")
+        return
+
     bot.send_chat_action(message.chat.id, 'typing')
     
     try:
-        # Убираем мат из системной роли для стабильности ответов ИИ
+        # Инструкция для качественных ответов
         system_prompt = (
             "Ты — полезный, умный и вежливый ИИ-ассистент. Отвечай на вопросы пользователя подробно, "
             "грамотно и дружелюбно на русском языке. Запрос пользователя: " + clean_text
         )
 
+        # 1. Получаем технический токен от DuckDuckGo AI
+        headers = {"x-client-variant": "chat"}
+        res = requests.get("https://duckduckgo.com", headers=headers)
+        v_token = res.headers.get("x-vqd-accept")
+
+        # 2. Отправляем запрос к мощной модели gpt-4o-mini
         payload = {
-            "messages": [{"role": "user", "content": system_prompt}],
-            "model": "openai"
+            "model": "gpt-4o-mini",
+            "messages": [{"role": "user", "content": system_prompt}]
         }
+        headers["x-vqd-4"] = v_token
         
-        response = requests.post("https://pollinations.ai", json=payload, timeout=30)
+        response = requests.post("https://duckduckgo.com", headers=headers, json=payload, timeout=20)
         
-        if response.status_code == 200 and response.text:
-            ai_response = response.text.strip()
-        else:
-            ai_response = "Извините, сервер временно перегружен. Пожалуйста, отправьте сообщение еще раз."
+        # Декодируем стабильный потоковый ответ
+        lines = response.text.split("\n")
+        ai_response = ""
+        for line in lines:
+            if line.startswith("data:"):
+                import json
+                try:
+                    data_json = json.loads(line[5:])
+                    if "message" in data_json:
+                        ai_response += data_json["message"]
+                except:
+                    pass
+        
+        if not ai_response:
+            ai_response = "Извините, сервер временно задумался. Пожалуйста, попробуйте еще раз."
             
         bot.reply_to(message, ai_response)
         
     except Exception as e:
-        bot.reply_to(message, f"❌ Ошибка соединения с ИИ: {e}")
+        bot.reply_to(message, "Извините, не удалось получить ответ. Пожалуйста, отправьте сообщение еще раз.")
 
 if __name__ == '__main__':
     render_url = os.environ.get("RENDER_EXTERNAL_URL")

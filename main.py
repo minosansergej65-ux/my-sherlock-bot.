@@ -5,8 +5,8 @@ from flask import Flask, request
 
 # ТВОЙ ТОКЕН ТЕЛЕГРАМ
 TELEGRAM_TOKEN = '8836578040:AAF2PsdNon7Avua_8k9cOx4aLtk1hzKu3do'
-# ТВОЙ API КЛЮЧ PROXYAPI
-API_KEY = 'sk-8FfUrRpLf44VMFVXvhQj'
+# ТВОЙ НОВЫЙ АКТИВНЫЙ API КЛЮЧ PROXYAPI (ОБНОВЛЕН)
+API_KEY = 'sk-fqLxyf8Vypai3VQoXBDwpYp6YLpVETiB'
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 app = Flask(__name__)
@@ -57,7 +57,7 @@ def handle_image_generation(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Не удалось сгенерировать картинку. Попробуйте изменить запрос.")
 
-# ЧАТ С ОФИЦИАЛЬНЫМ CHATGPT (ЧЕРЕЗ КЛЮЧ PROXYAPI С ТОЧНЫМ URL)
+# ЧАТ С ОФИЦИАЛЬНЫМ CHATGPT (ЧЕРЕЗ КЛЮЧ PROXYAPI)
 @bot.message_handler(func=lambda message: True)
 def handle_ai_chat(message):
     user_text = message.text.strip()
@@ -83,7 +83,6 @@ def handle_ai_chat(message):
     bot.send_chat_action(message.chat.id, 'typing')
     
     try:
-        # ДОБАВИЛИ ТОЧНЫЙ СЕГМЕНТ /v1/ ДЛЯ ИСПРАВЛЕНИЯ ОШИБКИ 405
         url = "https://proxyapi.ru"
             
         headers = {
@@ -106,7 +105,7 @@ def handle_ai_chat(message):
             result = response.json()
             ai_response = result['choices']['message']['content'].strip()
         else:
-            ai_response = f"❌ Ошибка ProxyAPI (Код {response.status_code}). Пожалуйста, убедись, что на сайте proxyapi.ru пополнен баланс личного кабинета."
+            ai_response = f"❌ Ошибка шлюза ИИ (Код {response.status_code}). Пожалуйста, проверьте баланс на сайте proxyapi.ru."
             
         bot.reply_to(message, ai_response)
         

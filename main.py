@@ -20,7 +20,7 @@ OWNER_ID = 8948282169
 
 # Цены в Telegram Stars
 UNLIMITED_PRICE_STARS = 100
-IMAGE_PRICE_STARS = 10
+IMAGE_PRICE_STARS = 20          # ← изменено на 20
 
 # Бесплатный лимит обычного пользователя
 DAILY_FREE_MESSAGES = 100

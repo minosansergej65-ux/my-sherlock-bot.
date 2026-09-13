@@ -12,8 +12,8 @@ from datetime import date
 # НАСТРОЙКИ
 # =========================================================
 
-TELEGRAM_TOKEN = "8836578040:AAF2Psd-Non7Avua_8k9cOx4aLtk1hz-Ku3do"
-API_KEY = "sk-fqLxyf8Vypai3VQoXBDwp-Yp6YLpVETiB"
+TELEGRAM_TOKEN = "8836578040:AAF2PsdNon7Avua_8k9cOx4aLtk1hzKu3do"
+API_KEY = "sk-QYOX6VR8ZyC01vC4nB8V9kuTgWsQ4515"
 
 # Твой Telegram ID
 OWNER_ID = 8948282169

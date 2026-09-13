@@ -17,12 +17,12 @@ API_KEY = "sk-QYOX6VR8ZyC01vC4nB8V9kuTgWsQ4515"
 OWNER_ID = 8948282169
 
 # Укажи здесь username своего Telegram-канала
-CHANNEL_USERNAME = "@apteka_mss323"
+CHANNEL_USERNAME = "@eaptx"
 
 # Ссылка на канал для кнопки
-CHANNEL_URL = "https://t.me/apteka_mss323"
+CHANNEL_URL = "https://t.me/eaptx"
 
-UNLIMITED_PRICE_STARS = 100
+UNLIMITEDPRISTARS = 100
 IMAGE_PRICE_STARS = 20
 DAILY_FREE_MESSAGES = 100
 
